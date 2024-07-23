@@ -5,20 +5,20 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
-from config import LogConfig, app_configs
+from src.config import LogConfig, app_configs # type: ignore
+from src.auth import router as auth_router
 
 logger = logging.getLogger("root")
-
 
 @asynccontextmanager
 async def lifespan(_application: FastAPI) -> AsyncGenerator:
     dictConfig(LogConfig().model_dump())
+    logger.info("App is running...")
     yield
 
 
 app = FastAPI(**app_configs, lifespan=lifespan)
 
-@app.get("/")
-async def root() -> dict:
-    logger.warning("Hello from backend logger")
-    return {"title": "Hello World"}
+app.include_router(router=auth_router.router, prefix="/auth", tags=["auth"])
+
+

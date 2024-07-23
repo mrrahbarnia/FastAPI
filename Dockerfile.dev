@@ -1,0 +1,30 @@
+FROM python:3.12.2-alpine3.19
+LABEL maintainer="mrrahbarnia@gmail.com"
+
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+RUN mkdir src
+WORKDIR /src
+
+COPY ./requirements/dev.txt /tmp/dev.txt
+COPY ./requirements/base.txt /tmp/base.txt
+
+COPY ./src /src
+
+RUN pip install --upgrade pip
+RUN pip install --no-cache-dir -r /tmp/dev.txt
+
+RUN rm -rf /tmp
+
+RUN adduser \
+      --disabled-password \
+      --no-create-home \
+      mohammadreza && \
+    mkdir -p /vol/web/static && \
+    mkdir -p /vol/web/media && \
+    chown -R mohammadreza:mohammadreza /vol && \
+    chmod -R 700 /vol
+
+USER mohammadreza
+

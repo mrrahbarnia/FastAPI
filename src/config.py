@@ -1,10 +1,12 @@
 from typing import Any
+from dotenv import load_dotenv
 
 from pydantic import BaseModel, PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from constants import Environment
+from src.constants import Environment # type: ignore
 
+load_dotenv()
 
 class CustomBaseSettings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -45,7 +47,7 @@ class LogConfig(BaseModel):
        'file': {
             'level': 'WARNING',
             'class': 'logging.handlers.RotatingFileHandler',
-            'filename': './../logs/backend.log',
+            'filename': './logs/backend.log',
             'maxBytes': 1024*1024*5,
             'backupCount': 5,
             'formatter': 'file',
