@@ -10,7 +10,7 @@ class User(Base):
     __tablename__ = "users"
     id: sqo.Mapped[types.UserId] = sqo.mapped_column(primary_key=True, autoincrement=True)
     email: sqo.Mapped[types.Email] = sqo.mapped_column(unique=True)
-    is_admin: sqo.Mapped[bool] = sqo.mapped_column(default=False)
+    rule: sqo.Mapped[str | None] = sqo.mapped_column(default="user")
     hashed_password: sqo.Mapped[str] = sqo.mapped_column()
 
     profile: sqo.Mapped["Profile"] = sqo.relationship(back_populates="user", cascade="all,delete-orphan")

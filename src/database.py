@@ -1,7 +1,7 @@
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Any
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy import MetaData, INTEGER, UUID, String
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy import MetaData, INTEGER, UUID, String, Insert, Update, Select, CursorResult
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncConnection
 
 from src.constants import DB_NAMING_CONVENTION # type: ignore
 from src.config import settings # type: ignore
@@ -9,7 +9,7 @@ from src.auth import types # type: ignore
 
 POSTGRES_URL = str(settings.POSTGRES_ASYNC_URL)
 
-engine = create_async_engine(POSTGRES_URL,pool_recycle=60*20, pool_size=16, pool_pre_ping=True)
+engine = create_async_engine(POSTGRES_URL)
 
 
 class Base(DeclarativeBase):
@@ -27,3 +27,55 @@ async def get_db_connection() -> AsyncGenerator:
         yield connection
     finally:
         await connection.close()
+
+
+async def fetch_one(
+        query: Select | Insert | Update,
+        db_connection: AsyncConnection | None = None,
+        commit_after: bool = False
+) -> dict[str, Any] | None:
+    if not db_connection:
+        async with engine.connect() as conn:
+            cursor = await _execute_query(query=query, db_connection=conn, commit_after=commit_after)
+            return cursor.first()._asdict() if cursor.rowcount > 0 else None # type: ignore
+    cursor = await _execute_query(query=query, db_connection=db_connection, commit_after=commit_after)
+    return cursor.first()._asdict() if cursor.rowcount > 0 else None # type: ignore
+
+
+async def fetch_all(
+        query: Select | Insert | Update,
+        db_connection: AsyncConnection | None = None,
+        commit_after: bool = False
+) -> list[dict[str, Any]]:
+    if not db_connection:
+        async with engine.connect() as conn:
+            cursor = await _execute_query(query=query, db_connection=conn, commit_after=commit_after)
+            return [r._asdict() for r in cursor.all()]
+
+    cursor = await _execute_query(query=query, db_connection=db_connection, commit_after=commit_after)
+    return [r._asdict() for r in cursor.all()]
+
+
+async def execute(
+        query: Insert | Update,
+        db_connection: AsyncConnection | None = None,
+        commit_after: bool = False
+) -> None:
+    if not db_connection:
+        async with engine.connect() as conn:
+            await _execute_query(query=query, db_connection=conn, commit_after=commit_after)
+            return
+    await _execute_query(query=query, db_connection=db_connection, commit_after=commit_after)
+
+
+async def _execute_query(
+        *,
+        query: Insert | Update | Select,
+        db_connection: AsyncConnection,
+        commit_after: bool = False
+) -> CursorResult:
+    result = await db_connection.execute(query)
+    if commit_after:
+        await db_connection.commit()
+    return result
+    
