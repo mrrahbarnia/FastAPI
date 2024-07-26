@@ -30,3 +30,15 @@ class IsAdminException(HTTPException):
     def __init__(self) -> None:
         self.status_code = status.HTTP_401_UNAUTHORIZED
         self.detail = "Only admin users can access to this endpoint"
+
+
+class InvalidVerificationCode(HTTPException):
+    def __init__(self) -> None:
+        self.status_code = status.HTTP_400_BAD_REQUEST
+        self.detail = "Verification code is invalid, get a new one"
+
+
+class NotActiveUser(HTTPException):
+    def __init__(self) -> None:
+        self.status_code = status.HTTP_400_BAD_REQUEST
+        self.detail = "This account is not active"

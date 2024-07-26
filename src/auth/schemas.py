@@ -62,6 +62,20 @@ class LoginOut(BaseModel):
     token_type: str
 
 
-class JwtSchema(BaseModel):
-    email: EmailStr
-    exp: int
+class VerificationIn(CustomBaseModel):
+    verification_code: str = Field(alias="verificationCode")
+
+
+class Profile(CustomBaseModel):
+    model_config = ConfigDict(json_schema_extra={
+        "examples": [
+            {   
+                "firstName": "John",
+                "lastName": "Jones",
+                "age": "32",
+            }
+        ]
+    })
+    first_name: str | None = Field(alias="firstName", min_length=2, max_length=40)
+    last_name: str | None = Field(alias="lastName", min_length=2, max_length=80)
+    age: int | None = Field(gt=12, lt=90)

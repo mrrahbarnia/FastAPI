@@ -6,6 +6,7 @@ class AuthConfig(BaseSettings):
     SECRET_KEY: str
     JWT_ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
+    VERIFICATION_CODE_LIFE_TIME_SECONDS: int
 
 
 auth_config = AuthConfig() # type: ignore

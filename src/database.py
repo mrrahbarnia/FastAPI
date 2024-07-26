@@ -1,3 +1,5 @@
+from redis import Redis
+
 from typing import AsyncGenerator, Any
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import MetaData, INTEGER, UUID, String, Insert, Update, Select, CursorResult
@@ -8,6 +10,7 @@ from src.config import settings # type: ignore
 from src.auth import types # type: ignore
 
 POSTGRES_URL = str(settings.POSTGRES_ASYNC_URL)
+REDIS_DSN = str(settings.REDIS_DSN)
 
 engine = create_async_engine(POSTGRES_URL)
 
@@ -27,6 +30,10 @@ async def get_db_connection() -> AsyncGenerator:
         yield connection
     finally:
         await connection.close()
+
+
+def get_redis_connection() -> Redis:
+    return Redis(host="localhost", port=6379, decode_responses=True)
 
 
 async def fetch_one(

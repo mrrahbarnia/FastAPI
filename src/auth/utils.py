@@ -1,5 +1,6 @@
 import jwt
 
+from uuid import uuid4
 from passlib.context import CryptContext # type: ignore
 from datetime import timedelta, datetime, timezone
 
@@ -11,6 +12,14 @@ access_token_life_time = auth_config.ACCESS_TOKEN_EXPIRE_MINUTES
 algorithm = auth_config.JWT_ALGORITHM
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def generate_random_code() -> str:
+    """
+    Generating random code for resetting
+    passwords or some operations like this.
+    """
+    return uuid4().hex[:6]
 
 
 def get_password_hash(password: Password) -> str:
