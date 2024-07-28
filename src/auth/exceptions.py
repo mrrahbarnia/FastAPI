@@ -42,3 +42,9 @@ class NotActiveUser(HTTPException):
     def __init__(self) -> None:
         self.status_code = status.HTTP_400_BAD_REQUEST
         self.detail = "This account is not active"
+
+
+class WrongOldPassword(HTTPException):
+    def __init__(self) -> None:
+        self.status_code = status.HTTP_400_BAD_REQUEST
+        self.detail = "Old password is wrong"

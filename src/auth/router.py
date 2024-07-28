@@ -1,6 +1,6 @@
 import logging
 
-from typing import Annotated, Mapping
+from typing import Annotated
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi import APIRouter, status, Depends, BackgroundTasks
 
@@ -48,30 +48,14 @@ async def verify_account(input_data: schemas.VerificationIn) -> dict:
     await service.verify_account(verification_code=input_data.verification_code)
     return {"message": "Account verified successfully"}
 
-
-@router.post(
-    "/profile/set/",
-    response_model=schemas.Profile,
-    status_code=status.HTTP_201_CREATED
-)
-async def set_my_profile(
-    input_data: schemas.Profile,
-    current_user: Annotated[Mapping, Depends(get_current_active_user)]
-) -> schemas.Profile:
-    await service.set_profile(
-        user_id=current_user["id"], first_name=input_data.first_name,
-        last_name=input_data.last_name, age=input_data.age
+@router.put("/change-password/", status_code=status.HTTP_200_OK)
+async def change_password(
+    input_data: schemas.ChangePasswordIn,
+    active_user: Annotated[dict, Depends(get_current_active_user)]
+) -> dict:
+    await service.change_password(
+        user=active_user, old_password=input_data.old_password, new_password=input_data.new_password
     )
-    return input_data
-
-
-@router.get(
-    "/profile/get/",
-    response_model=schemas.Profile,
-    status_code=status.HTTP_200_OK
-)
-async def get_my_profile(
-    current_user: Annotated[Mapping, Depends(get_current_active_user)]
-) -> schemas.Profile:
-    profile = await service.get_profile(user_id=current_user["id"])
-    return profile
+    return {"message": "Password changed successfully"}
+    
+    

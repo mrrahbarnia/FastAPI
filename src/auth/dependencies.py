@@ -1,12 +1,15 @@
 import jwt
-from typing import Annotated, Literal, Mapping
+from typing import Annotated, Literal
 from jwt import exceptions as jwt_exceptions
 
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
-from src.auth.config import auth_config
+
 from src.auth import exceptions
 from src.auth import service
+from src.auth.config import auth_config
+from src.auth.models import User
+
 
 secret_key = auth_config.SECRET_KEY
 algorithm = auth_config.JWT_ALGORITHM
@@ -14,7 +17,7 @@ algorithm = auth_config.JWT_ALGORITHM
 oauth2_schema = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 
-async def decode_access_token(token: Annotated[str, Depends(oauth2_schema)]):
+async def decode_access_token(token: Annotated[str, Depends(oauth2_schema)]) -> dict:
     try:
         data = jwt.decode(jwt=token, key=secret_key, algorithms=[algorithm])
     except jwt_exceptions.ExpiredSignatureError:
@@ -24,7 +27,7 @@ async def decode_access_token(token: Annotated[str, Depends(oauth2_schema)]):
     return data
 
 
-async def get_current_active_user(data: Annotated[dict, Depends(decode_access_token)]) -> Mapping:
+async def get_current_active_user(data: Annotated[dict, Depends(decode_access_token)]) -> User:
     if "user_id" not in data:
         raise exceptions.CredentialsException
     user_id = data["user_id"]

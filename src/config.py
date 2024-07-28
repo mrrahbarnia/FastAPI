@@ -1,7 +1,7 @@
 from typing import Any
 from dotenv import load_dotenv
 
-from pydantic import BaseModel, PostgresDsn, RedisDsn
+from pydantic import BaseModel, PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from src.constants import Environment # type: ignore
@@ -16,7 +16,8 @@ class CustomBaseSettings(BaseSettings):
 
 class Config(CustomBaseSettings):
     POSTGRES_ASYNC_URL: PostgresDsn
-    REDIS_DSN: RedisDsn
+    REDIS_HOST: str
+    REDIS_PORT: int
     ENVIRONMENT: Environment = Environment.PRODUCTION
     APP_VERSION: str = "0.1"
 

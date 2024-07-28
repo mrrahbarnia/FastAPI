@@ -2,7 +2,7 @@ from redis import Redis
 
 from typing import AsyncGenerator, Any
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy import MetaData, INTEGER, UUID, String, Insert, Update, Select, CursorResult
+from sqlalchemy import MetaData, INTEGER, String, Insert, Update, Select, CursorResult, Delete
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncConnection
 
 from src.constants import DB_NAMING_CONVENTION # type: ignore
@@ -10,7 +10,8 @@ from src.config import settings # type: ignore
 from src.auth import types # type: ignore
 
 POSTGRES_URL = str(settings.POSTGRES_ASYNC_URL)
-REDIS_DSN = str(settings.REDIS_DSN)
+REDIS_PORT = settings.REDIS_PORT
+REDIS_HOST = settings.REDIS_HOST
 
 engine = create_async_engine(POSTGRES_URL)
 
@@ -19,7 +20,6 @@ class Base(DeclarativeBase):
     metadata = MetaData(naming_convention=DB_NAMING_CONVENTION)
     type_annotation_map = {
         types.UserId: INTEGER,
-        types.ProfileId: UUID,
         types.Email: String
     }
 
@@ -33,7 +33,7 @@ async def get_db_connection() -> AsyncGenerator:
 
 
 def get_redis_connection() -> Redis:
-    return Redis(host="localhost", port=6379, decode_responses=True)
+    return Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
 
 
 async def fetch_one(
@@ -64,20 +64,19 @@ async def fetch_all(
 
 
 async def execute(
-        query: Insert | Update,
+        query: Insert | Update | Delete,
         db_connection: AsyncConnection | None = None,
         commit_after: bool = False
-) -> None:
+) -> CursorResult:
     if not db_connection:
         async with engine.connect() as conn:
-            await _execute_query(query=query, db_connection=conn, commit_after=commit_after)
-            return
-    await _execute_query(query=query, db_connection=db_connection, commit_after=commit_after)
+            return await _execute_query(query=query, db_connection=conn, commit_after=commit_after)
+    return await _execute_query(query=query, db_connection=db_connection, commit_after=commit_after)
 
 
 async def _execute_query(
         *,
-        query: Insert | Update | Select,
+        query: Insert | Update | Select | Delete,
         db_connection: AsyncConnection,
         commit_after: bool = False
 ) -> CursorResult:

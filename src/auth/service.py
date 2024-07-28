@@ -10,7 +10,7 @@ from src.auth import exceptions
 from src.auth import utils
 from src.auth.config import auth_config
 from src.auth.types import Password, UserId
-from src.auth.models import User, Profile
+from src.auth.models import User
 
 logger = logging.getLogger("auth")
 
@@ -64,24 +64,17 @@ async def verify_account(*, verification_code):
     )
     if not email:
         raise exceptions.InvalidVerificationCode
-    query = sqa.update(User).where(User.email == email).values(is_active=True)
+    query = sqa.update(User).where(User.email==email).values(is_active=True)
     await database.execute(query=query, commit_after=True)
 
 
-async def set_profile(
-        *,
-        user_id: int,
-        first_name: str | None,
-        last_name: str | None,
-        age: int | None
-):
-    query = sqa.update(Profile).where(Profile.user_id == user_id).values(
-        first_name=first_name, last_name=last_name, age=age, user_id=user_id
+async def change_password(
+        *, user: User, old_password: Password, new_password: Password
+) -> None: 
+    if not utils.verify_password(plain_password=str(old_password), hashed_password=user["hashed_password"]):
+        raise exceptions.WrongOldPassword
+    new_hashed_password = utils.get_password_hash(str(new_password))
+    query = sqa.update(User).where(User.hashed_password==user["hashed_password"]).values(
+        hashed_password=new_hashed_password
     )
     await database.execute(query=query, commit_after=True)
-
-
-async def get_profile(*, user_id: UserId):
-    query = sqa.select(Profile).where(Profile.user_id == user_id)
-    profile = await database.fetch_one(query=query)
-    return profile

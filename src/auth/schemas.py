@@ -66,16 +66,28 @@ class VerificationIn(CustomBaseModel):
     verification_code: str = Field(alias="verificationCode")
 
 
-class Profile(CustomBaseModel):
-    model_config = ConfigDict(json_schema_extra={
-        "examples": [
-            {   
-                "firstName": "John",
-                "lastName": "Jones",
-                "age": "32",
-            }
-        ]
-    })
-    first_name: str | None = Field(alias="firstName", min_length=2, max_length=40)
-    last_name: str | None = Field(alias="lastName", min_length=2, max_length=80)
-    age: int | None = Field(gt=12, lt=90)
+class ChangePasswordIn(CustomBaseModel):
+    old_password: Password = Field(alias="oldPassword")
+    new_password: Password = Field(alias="newPassword")
+    confirm_password: Password = Field(alias="confirmPassword")
+
+    @field_validator("new_password", mode="after")
+    @classmethod
+    def validate_password_pattern(cls, new_password: Password) -> Password:
+        if not re.match(PASSWORD_PATTERN, new_password):
+            raise ValueError(
+                "Has minimum 8 characters in length",
+                "At least one uppercase English letter",
+                "At least one lowercase English letter",
+                "At least one digit",
+                "At least one special character"
+            )
+        return new_password
+
+    @model_validator(mode="after")
+    def validate_passwords(self):
+        new_password = self.new_password
+        confirm_password = self.confirm_password
+        if new_password is not None and confirm_password is not None and new_password != confirm_password:
+            raise ValueError("Passwords don't match!")
+        return self
