@@ -1,4 +1,4 @@
-FROM python:3.12.2-alpine3.19
+FROM python:3.12-bullseye
 LABEL maintainer="mrrahbarnia@gmail.com"
 
 ENV PYTHONDONTWRITEBYTECODE 1
@@ -10,12 +10,15 @@ WORKDIR /src
 COPY ./requirements/dev.txt /tmp/dev.txt
 COPY ./requirements/base.txt /tmp/base.txt
 
-COPY ./src /src
+RUN apt-get update \
+  && apt-get -y install netcat gcc \
+  && apt-get clean
 
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r /tmp/dev.txt
-
 RUN rm -rf /tmp
+
+COPY . .
 
 RUN adduser \
       --disabled-password \

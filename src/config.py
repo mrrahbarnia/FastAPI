@@ -16,6 +16,7 @@ class CustomBaseSettings(BaseSettings):
 
 class Config(CustomBaseSettings):
     POSTGRES_ASYNC_URL: PostgresDsn
+    POSTGRES_TEST_ASYNC_URL: PostgresDsn
     REDIS_HOST: str
     REDIS_PORT: int
     ENVIRONMENT: Environment = Environment.PRODUCTION

@@ -2,6 +2,18 @@ version: '3.9'
 
 services:
 
+  # app:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.dev
+  #   ports:
+  #     - "8000:8000"
+  #   env_file:
+  #     - ./.env
+  #   command: uvicorn src.main:app --reload
+  #   volumes:
+  #     - ./src:/src
+
   dev-db:
     image: postgres:16.1-alpine3.19
     restart: always
@@ -11,6 +23,18 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+  
+  test-db:
+    image: postgres:16.1-alpine3.19
+    restart: always
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - test-data:/var/lib/postgresql/data
 
   adminer:
     image: adminer
@@ -31,3 +55,4 @@ name: development
 volumes:
   pgdata:
   redis-data:
+  test-data:

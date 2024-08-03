@@ -4,6 +4,7 @@ import sqlalchemy as sqa
 
 from typing import Mapping
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncConnection
 
 from src import database
 from src.auth import exceptions
@@ -29,11 +30,13 @@ async def get_user_by_id(id: UserId) -> Mapping:
     return user
 
 
-async def register(*, email: str, password: Password, verification_code: str) -> None:
+async def register(
+        *, email: str, password: Password, verification_code: str, db_connection: AsyncConnection
+) -> None:
     hashed_password = utils.get_password_hash(password=password)
     user_query = sqa.insert(User).values(email=email, hashed_password=hashed_password)
     try:
-        await database.execute(query=user_query, commit_after=True)
+        await database.execute(query=user_query, db_connection=db_connection, commit_after=True)
         database.get_redis_connection().set(
             name=f"verification_code:{verification_code}",
             value=email,
@@ -43,9 +46,9 @@ async def register(*, email: str, password: Password, verification_code: str) ->
         raise exceptions.EmailAlreadyExists
 
 
-async def login(*, email: str, password: str) -> str:
+async def login(*, email: str, password: str, db_connection: AsyncConnection) -> str:
     query = sqa.select(User).where(User.email == email)
-    user = await database.fetch_one(query=query)
+    user = await database.fetch_one(query=query, db_connection=db_connection)
     if not user:
         raise exceptions.UserNotFound
     if not utils.verify_password(
@@ -58,18 +61,18 @@ async def login(*, email: str, password: str) -> str:
     return utils.encode_access_token(user_id=user["id"], user_rule=user["rule"])
 
 
-async def verify_account(*, verification_code):
+async def verify_account(*, verification_code: str, db_connection: AsyncConnection) -> None:
     email = database.get_redis_connection().get(
         name=f"verification_code:{verification_code}"
     )
     if not email:
         raise exceptions.InvalidVerificationCode
     query = sqa.update(User).where(User.email==email).values(is_active=True)
-    await database.execute(query=query, commit_after=True)
+    await database.execute(query=query, db_connection=db_connection, commit_after=True)
 
 
 async def change_password(
-        *, user: User, old_password: Password, new_password: Password
+        *, user: User, old_password: Password, new_password: Password, db_connection: AsyncConnection
 ) -> None: 
     if not utils.verify_password(plain_password=str(old_password), hashed_password=user["hashed_password"]):
         raise exceptions.WrongOldPassword
@@ -77,4 +80,4 @@ async def change_password(
     query = sqa.update(User).where(User.hashed_password==user["hashed_password"]).values(
         hashed_password=new_hashed_password
     )
-    await database.execute(query=query, commit_after=True)
+    await database.execute(query=query, db_connection=db_connection, commit_after=True)

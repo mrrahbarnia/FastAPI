@@ -3,7 +3,7 @@ from redis import Redis
 from typing import AsyncGenerator, Any
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import MetaData, INTEGER, String, Insert, Update, Select, CursorResult, Delete
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncConnection
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncConnection, AsyncEngine
 
 from src.constants import DB_NAMING_CONVENTION # type: ignore
 from src.config import settings # type: ignore
@@ -13,7 +13,7 @@ POSTGRES_URL = str(settings.POSTGRES_ASYNC_URL)
 REDIS_PORT = settings.REDIS_PORT
 REDIS_HOST = settings.REDIS_HOST
 
-engine = create_async_engine(POSTGRES_URL)
+engine: AsyncEngine = create_async_engine(POSTGRES_URL)
 
 
 class Base(DeclarativeBase):
@@ -24,7 +24,7 @@ class Base(DeclarativeBase):
     }
 
 
-async def get_db_connection() -> AsyncGenerator:
+async def get_db_connection() -> AsyncGenerator[AsyncConnection, None]:
     connection = await engine.connect()
     try:
         yield connection
