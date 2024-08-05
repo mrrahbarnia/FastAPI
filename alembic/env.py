@@ -7,16 +7,14 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 from src.database import Base
-from src.auth import models
-from src.config import settings
+from src.auth import models # noqa
+from src.contacts import models # type:ignore
 
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# config.set_section_option("devdb", "sqlalchemy.url", str(settings.POSTGRES_ASYNC_URL))
-# config.set_section_option("testdb", "sqlalchemy.url", str(settings.POSTGRES_ASYNC_URL))
 
 
 target_metadata = Base.metadata

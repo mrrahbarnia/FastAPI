@@ -1,18 +1,19 @@
 import re
 
+from typing import Annotated
 from pydantic import (
     BaseModel, ConfigDict, EmailStr, model_validator, Field, field_validator
 )
 
 from src.schemas import CustomBaseModel
 from src.auth.config import auth_config
-from src.auth.types import Password
+from src.auth.types import Password, Email
 
 PASSWORD_PATTERN = auth_config.PASSWORD_PATTERN
 
 
 class RegisterOut(CustomBaseModel):
-    email: EmailStr
+    email: Annotated[Email, EmailStr]
 
 
 class RegisterIn(RegisterOut):

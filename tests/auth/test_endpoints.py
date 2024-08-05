@@ -1,7 +1,7 @@
 import pytest
 
 from fastapi import status
-from async_asgi_testclient import TestClient
+from async_asgi_testclient import TestClient # type: ignore
 
 from src.database import get_redis_connection
 
@@ -86,7 +86,7 @@ async def test_verify_account_with_invalid_verification_code(client: TestClient)
 
 async def test_verify_account_with_valid_verification_code(client: TestClient):
     r = get_redis_connection()
-    result_list: list[str] = r.keys(pattern="verification_code*")
+    result_list: list[str] = r.keys(pattern="verification_code*") # type: ignore
     payload = {
         "verificationCode": result_list[0].split(":")[1]
     }

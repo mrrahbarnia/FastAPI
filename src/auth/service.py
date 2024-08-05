@@ -1,16 +1,15 @@
 import asyncio
 import logging
-import sqlalchemy as sqa
+import sqlalchemy as sa
 
-from typing import Mapping
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncConnection
+from sqlalchemy.ext.asyncio import AsyncEngine
 
-from src import database
+from src.database import get_redis_connection
 from src.auth import exceptions
 from src.auth import utils
 from src.auth.config import auth_config
-from src.auth.types import Password, UserId
+from src.auth.types import Password, UserId, Email
 from src.auth.models import User
 
 logger = logging.getLogger("auth")
@@ -22,62 +21,78 @@ async def send_email(email: str, subject: str):
     logger.info(f"Sending {subject} to {email}...")
 
 
-async def get_user_by_id(id: UserId) -> Mapping:
-    query = sqa.select(User).where(User.id == id)
-    user = await database.fetch_one(query=query)
+async def get_user_by_id(id: UserId, engine: AsyncEngine):
+    query = sa.select(User).where(User.id == id)
+    async with engine.begin() as transaction:
+        user = (await transaction.execute(query)).first()
     if not user:
         raise exceptions.UserNotFound
-    return user
+    
+    return user._tuple()
 
 
 async def register(
-        *, email: str, password: Password, verification_code: str, db_connection: AsyncConnection
+        *, email: Email, password: Password, verification_code: str, engine: AsyncEngine
 ) -> None:
     hashed_password = utils.get_password_hash(password=password)
-    user_query = sqa.insert(User).values(email=email, hashed_password=hashed_password)
+    query = sa.insert(User).values(
+        {
+            User.email: email,
+            User.hashed_password: hashed_password
+        }
+    )
     try:
-        await database.execute(query=user_query, db_connection=db_connection, commit_after=True)
-        database.get_redis_connection().set(
+        async with engine.begin() as transaction:
+            await transaction.execute(query)
+
+        get_redis_connection().set(
             name=f"verification_code:{verification_code}",
             value=email,
-            ex=auth_config.ACCESS_TOKEN_EXPIRE_MINUTES
-        )
+            ex=auth_config.VERIFICATION_CODE_LIFE_TIME_SECONDS
+        )  
     except IntegrityError:
         raise exceptions.EmailAlreadyExists
 
 
-async def login(*, email: str, password: str, db_connection: AsyncConnection) -> str:
-    query = sqa.select(User).where(User.email == email)
-    user = await database.fetch_one(query=query, db_connection=db_connection)
+async def login(*, email: str, password: str, engine: AsyncEngine) -> str:
+    query = sa.select(User).where(User.email == email)
+    async with engine.begin() as transaction:
+        user: sa.Row[tuple[User]] | None = (await transaction.execute(query)).first()
     if not user:
         raise exceptions.UserNotFound
     if not utils.verify_password(
-        plain_password=password, hashed_password=user["hashed_password"]
+        plain_password=password, hashed_password=user.hashed_password
     ):
         raise exceptions.UserNotFound
-    if user["is_active"] is False:
+    if user.is_active is False:
         raise exceptions.NotActiveUser
 
-    return utils.encode_access_token(user_id=user["id"], user_rule=user["rule"])
+    return utils.encode_access_token(user_id=user.id, user_rule=user.rule)
 
 
-async def verify_account(*, verification_code: str, db_connection: AsyncConnection) -> None:
-    email = database.get_redis_connection().get(
+async def verify_account(*, verification_code: str, engine: AsyncEngine) -> None:
+    email = get_redis_connection().get(
         name=f"verification_code:{verification_code}"
     )
     if not email:
         raise exceptions.InvalidVerificationCode
-    query = sqa.update(User).where(User.email==email).values(is_active=True)
-    await database.execute(query=query, db_connection=db_connection, commit_after=True)
+    query = sa.update(User).where(User.email==email).values({User.is_active: True})
+    async with engine.begin() as transaction:
+        await transaction.execute(query)
 
 
 async def change_password(
-        *, user: User, old_password: Password, new_password: Password, db_connection: AsyncConnection
+        *, user: User, old_password: Password, new_password: Password, engine: AsyncEngine
 ) -> None: 
-    if not utils.verify_password(plain_password=str(old_password), hashed_password=user["hashed_password"]):
+    if not utils.verify_password(
+        plain_password=str(old_password), hashed_password=user.hashed_password
+    ):
         raise exceptions.WrongOldPassword
-    new_hashed_password = utils.get_password_hash(str(new_password))
-    query = sqa.update(User).where(User.hashed_password==user["hashed_password"]).values(
-        hashed_password=new_hashed_password
+    new_hashed_password = utils.get_password_hash(new_password)
+    query = sa.update(User).where(User.hashed_password==user.hashed_password).values(
+        {
+            User.hashed_password: new_hashed_password
+        }
     )
-    await database.execute(query=query, db_connection=db_connection, commit_after=True)
+    async with engine.begin() as transaction:
+        await transaction.execute(query)

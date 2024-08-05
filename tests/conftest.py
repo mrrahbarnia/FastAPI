@@ -2,26 +2,25 @@ import pytest
 import pytest_asyncio
 import asyncio
 
+from functools import lru_cache
 from typing import AsyncGenerator, Final, Generator
 from httpx import AsyncClient, ASGITransport
-from async_asgi_testclient import TestClient
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine, AsyncConnection
+from async_asgi_testclient import TestClient # type: ignore
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
-from src.database import Base, get_db_connection
+from src.database import Base, get_engine
 from src.config import settings
 from src.main import app
 
 TEST_DB_URL: Final[str] = str(settings.POSTGRES_TEST_ASYNC_URL)
-engine = create_async_engine(TEST_DB_URL)
+test_engine = create_async_engine(TEST_DB_URL)
 
-async def override_db_connection() -> AsyncGenerator[AsyncConnection, None]:
-    connection = await engine.connect()
-    try:
-        yield connection
-    finally:
-        await connection.close()
 
-app.dependency_overrides[get_db_connection] = override_db_connection
+@lru_cache
+def override_get_engine() -> AsyncEngine:
+    return test_engine
+
+app.dependency_overrides[get_engine] = override_get_engine
 
 
 @pytest_asyncio.fixture(scope="session")
@@ -54,5 +53,5 @@ def event_loop() -> Generator:
 
 @pytest_asyncio.fixture
 async def client() -> AsyncGenerator[TestClient, None]:
-    async with AsyncClient(transport=ASGITransport(app=app, client=("127.0.0.1", "8000")), base_url="http://test") as client:
+    async with AsyncClient(transport=ASGITransport(app=app, client=("127.0.0.1", "8000")), base_url="http://test") as client: # type: ignore
         yield client
