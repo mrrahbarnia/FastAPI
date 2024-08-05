@@ -5,6 +5,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
+
 from src.config import LogConfig, app_configs # type: ignore
 from src.auth import router as auth_router
 from src.contacts import router as phone_book_router
@@ -23,5 +24,3 @@ app = FastAPI(**app_configs, lifespan=lifespan)
 
 app.include_router(router=auth_router.router, prefix="/auth", tags=["auth"])
 app.include_router(router=phone_book_router.router, prefix="/phone-book", tags=["phone book"])
-
-

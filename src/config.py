@@ -20,6 +20,7 @@ class Config(CustomBaseSettings):
     REDIS_HOST: str
     REDIS_PORT: int
     ENVIRONMENT: Environment = Environment.PRODUCTION
+    DEFAULT_PAGINATION_NUMBER: int
     APP_VERSION: str = "0.1"
 
 

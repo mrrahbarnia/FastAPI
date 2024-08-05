@@ -14,3 +14,4 @@ PyJWT==2.8.0
 redis==5.0.7
 async-asgi-testclient=1.4.11
 pytest-asyncio==0.23.8
+fastapi-pagination==0.12.26

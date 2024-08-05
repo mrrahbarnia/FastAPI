@@ -1,29 +1,25 @@
-# from enum import Enum
-# from typing import Annotated
-# from pydantic import Field
-# from fastapi import Query
+from typing import Annotated
+from enum import Enum
+from pydantic import Field
+from fastapi import Query
 
-# from src.schemas import CustomBaseModel
-
-
-# class OrderEnum(Enum):
-#     DESC = "desc"
-#     ASC = "asc"
+from src.schemas import CustomBaseModel
 
 
-# class Pagination(CustomBaseModel):
-#     per_page: int | None = Field(alias="perPage", default=10)
-#     page: int | None = 1
-#     order: OrderEnum
+class SortEnum(Enum):
+    ASC = "asc"
+    DESC = "desc"
 
 
-# async def pagination_dependency(
-#         order: Annotated[OrderEnum, Query()] = OrderEnum.DESC,
-#         page: Annotated[int | None, Query(ge=1)] = 1,
-#         per_page: Annotated[int | None, Query(ge=1)] = 10,
-# ) -> Pagination:
-#     """
-#     General pagination model for using in all application.
-#     """
-#     return Pagination(perPage=per_page, page=page, order=order)
+class Pagination(CustomBaseModel):
+    per_page: int = Field(serialization_alias="perPage")
+    page: int
+    order: SortEnum
 
+
+async def pagination_params(
+        page: Annotated[int, Query()] = 1,
+        per_page: Annotated[int, Query()] = 10,
+        order: SortEnum = SortEnum.DESC
+):
+    return Pagination(per_page=per_page, page=page, order=order)

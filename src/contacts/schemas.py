@@ -1,4 +1,4 @@
-from pydantic import Field, field_validator, ConfigDict
+from pydantic import Field, field_validator, ConfigDict, BaseModel
 
 from src.schemas import CustomBaseModel
 
@@ -22,3 +22,8 @@ class Contact(CustomBaseModel):
         if len(value) != 11:
             raise ValueError("Phone number must be exact 11 digits.")
         return value
+
+
+class PaginatedContact(BaseModel):
+    count: int
+    contacts: list[Contact] | None

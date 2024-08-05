@@ -2,7 +2,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, status, Depends
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-# from src.pagination import pagination_dependency, Pagination
+from src.pagination import Pagination, pagination_params
 from src.database import get_engine
 from src.contacts import schemas
 from src.contacts import service
@@ -31,13 +31,19 @@ async def add_contact(
     return input_data
 
 
-@router.get("/my-contacts/", response_model=list[schemas.Contact])
+@router.get("/my-contacts/", 
+            response_model=schemas.PaginatedContact
+)
 async def get_my_contacts(
     active_user: Annotated[User, Depends(get_current_active_user)],
-    engine: Annotated[AsyncEngine, Depends(get_engine)]
-) -> Any:
-    contacts = await service.get_my_contacts(creator_id=active_user.id, engine=engine)
-    return contacts
+    engine: Annotated[AsyncEngine, Depends(get_engine)],
+    pagination_data: Annotated[Pagination, Depends(pagination_params)]
+):
+    data = await service.get_my_contacts(
+        creator_id=active_user.id, engine=engine, page=pagination_data.page,
+        per_page=pagination_data.per_page, order=pagination_data.order
+    )
+    return data
 
 
 

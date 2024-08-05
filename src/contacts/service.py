@@ -1,12 +1,10 @@
 import sqlalchemy as sa
 
-from typing import Annotated
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.exc import IntegrityError
-from fastapi import Depends
 
-from src import database
-# from src.pagination import pagination_dependency, Pagination
+from src.contacts import schemas
+from src.pagination import SortEnum
 from src.contacts import exceptions
 from src.contacts.models import Contact
 from src.auth.types import UserId
@@ -30,15 +28,34 @@ async def create_contact(
         raise exceptions.PhoneNumberAlreadyExists
 
 
-async def get_my_contacts(*, creator_id: UserId, engine: AsyncEngine) -> list[tuple[str, str, str | None]]:
-    query = sa.select(Contact.name, Contact.phone_number, Contact.description).where(
+async def get_my_contacts(
+        *, creator_id: UserId, engine: AsyncEngine,
+        per_page: int, page: int, order: SortEnum
+) -> dict:
+    order_by = sa.desc if order.value == "desc" else sa.asc
+    offset = 0 if page == 1 else (page - 1) * per_page
+
+    contacts_query = sa.select(Contact.name, Contact.phone_number, Contact.description).where(
         Contact.creator == creator_id
-    )
+    ).limit(per_page).offset(offset).order_by(order_by(Contact.id))
+    count_query = sa.select(sa.func.count()).select_from(sa.select(Contact.id).where(
+        Contact.creator == creator_id
+    ).subquery())
+
     async with engine.connect() as transaction:
         result: sa.CursorResult[tuple[str, str, str | None]] = (
-            await transaction.execute(query)
+            await transaction.execute(contacts_query)
         )
-    return ([r._tuple() for r in result.all()])
+        count = await transaction.scalar(count_query)
+
+    assert count is not None
+    return {
+        "count": count,
+        "contacts": [
+            {"name": contact.name , "phone_number": contact.phone_number, "description": contact.description}
+            for contact in result.all()
+        ]
+    }
 
 
 
